@@ -7,13 +7,14 @@ import { usePaginatedTransactions } from "./hooks/usePaginatedTransactions"
 import { useTransactionsByEmployee } from "./hooks/useTransactionsByEmployee"
 import { EMPTY_EMPLOYEE } from "./utils/constants"
 import { Employee } from "./utils/types"
+import mockdata from "./mock-data.json"
 
 export function App() {
   const { data: employees, ...employeeUtils } = useEmployees()
   const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
-  const [isLoading, setIsLoading] = useState(false)
-
+  const [isLoading, setIsLoading] = useState(employeeUtils.loading)
+  const [showViewMoreBtn, setShowViewMoreBtn] = useState(true)
   const transactions = useMemo(
     () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
     [paginatedTransactions, transactionsByEmployee]
@@ -34,8 +35,10 @@ export function App() {
       paginatedTransactionsUtils.invalidateData()
       if (employeeId === "") {
         await loadAllTransactions()
+        setShowViewMoreBtn(true)
       } else {
         await transactionsByEmployeeUtils.fetchById(employeeId)
+        setShowViewMoreBtn(false)
       }
     },
     [paginatedTransactionsUtils, transactionsByEmployeeUtils, loadAllTransactions]
@@ -44,8 +47,10 @@ export function App() {
   useEffect(() => {
     if (employees === null && !employeeUtils.loading) {
       loadAllTransactions()
+      setIsLoading(false)
+      setShowViewMoreBtn(true)
     }
-  }, [employeeUtils.loading, employees, loadAllTransactions])
+  }, [setIsLoading, employeeUtils.loading, employees, loadAllTransactions, setShowViewMoreBtn])
 
   return (
     <Fragment>
@@ -81,6 +86,11 @@ export function App() {
           {transactions !== null && (
             <button
               className="RampButton"
+              style={
+                !showViewMoreBtn || transactions.length >= mockdata.transactions.length
+                  ? { display: "none" }
+                  : { display: "block" }
+              }
               disabled={paginatedTransactionsUtils.loading}
               onClick={async () => {
                 await loadAllTransactions()
